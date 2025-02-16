@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Message, PartialMessage } from 'discord.js';
+import { Client, GatewayIntentBits, Message, PartialMessage, TextChannel } from 'discord.js';
 import TelegramBot, { InputMedia } from 'node-telegram-bot-api';
 import * as dotenv from 'dotenv';
 
@@ -123,6 +123,28 @@ interface TelegramMessageData {
       console.error('Ошибка удаления:', error);
     }
   }
+
+  // Отправка последних 5 сообщений
+async function sendLastMessages(limit:number): Promise<void> {
+  try {
+    const channel = await discordClient.channels.fetch(process.env.DISCORD_CHANNEL_ID!) as TextChannel;
+    if (!channel) throw new Error('Канал не найден');
+
+    const messages = await channel.messages.fetch({ limit: limit });
+    const messagesArray = Array.from(messages.values()).reverse();
+    console.log('messages', messages)
+    for (const message of messagesArray) {
+      if (shouldProcessMessage(message)) {
+        await sendToTelegram(message);
+        await new Promise(resolve => setTimeout(resolve, 500)); // Задержка между сообщениями
+      }
+    }
+
+    console.log(`Последние ${limit} сообщений отправлены в Telegram`);
+  } catch (error) {
+    console.error('Ошибка при отправке истории:', error);
+  }
+}
   
   // Проверка типа медиа
   // function isImage(attachment: Attachment): boolean {
@@ -135,6 +157,8 @@ interface TelegramMessageData {
     if (shouldProcessMessage(message)) {
       await sendToTelegram(message);
     }
+
+    console.log(`📩 Новое сообщение в канале ${message.channel.id}`);
   });
   
   discordClient.on('messageUpdate', async (oldMsg, newMsg) => {
@@ -150,6 +174,7 @@ interface TelegramMessageData {
   });
   
   function shouldProcessMessage(message: Message | PartialMessage): boolean {
+    // console.log("message", JSON.stringify(message, null, 4))
     return !!(
       message.channel.id === process.env.DISCORD_CHANNEL_ID &&
       !message.author?.bot &&
@@ -163,8 +188,8 @@ interface TelegramMessageData {
 discordClient.login(process.env.DISCORD_TOKEN!)
     .then(async () => {
         console.log('Discord bot connected');
-        const updates = await telegramBot.getUpdates()
-        console.log("updates", JSON.stringify(updates, null, 4))
+        // const updates = await telegramBot.getUpdates()
+        // console.log("updates", JSON.stringify(updates, null, 4))
         console.log('Initial history sent');
     })
     .catch(error => console.error('Discord login error:', error));
@@ -173,7 +198,18 @@ discordClient.login(process.env.DISCORD_TOKEN!)
 // shadowsocksAgent.on('error', error => console.error('Proxy error:', error));
 discordClient.on('error', error => console.error('Discord error:', error));
 telegramBot.on('error', error => console.error('Telegram error:', error));
-
+discordClient.on('ready', () => {
+  console.log('✅ Бот подключен к Discord');
+  console.log(`🆔 ID канала: ${process.env.DISCORD_CHANNEL_ID}`);
+  
+  const channel = discordClient.channels.cache.get(process.env.DISCORD_CHANNEL_ID!);
+  if (!channel) {
+    console.error('❌ Канал не найден!');
+    return;
+  }
+  console.log(`📢 Бот слушает канал: ${(channel as TextChannel).name}`);
+  // sendLastMessages(1);
+});
 // Элегантное завершение
 process.on('SIGINT', () => {
     discordClient.destroy();
