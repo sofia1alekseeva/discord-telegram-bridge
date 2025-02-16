@@ -27,3 +27,64 @@ Discord ↔ Telegram Bridge Bot
 git clone https://github.com/yourusername/discord-telegram-bot.git
 cd discord-telegram-bot
 npm install
+```
+
+#### Создайте файл .env в корне проекта:
+```bash
+DISCORD_TOKEN=ваш_токен_бота
+DISCORD_CHANNEL_ID=ид_канала
+TELEGRAM_TOKEN=ваш_телеграм_токен
+TELEGRAM_CHAT_ID=ид_чата
+```
+#### Скомпилируйте проект:
+```bash
+npm run build
+```
+
+#### Запустите бота:
+```bash
+npm start
+```
+
+## Настройка
+### Discord
+#### Создайте бота на Discord Developer Portal.
+
+Включите следующие интенты:
+
+- Guilds
+
+- GuildMessages
+
+- MessageContent
+
+Пригласите бота на сервер с правами:
+
+- Read Messages
+
+- View channel
+
+Telegram
+Создайте бота через @BotFather.
+
+Получите TELEGRAM_CHAT_ID через @userinfobot.
+
+Использование
+Напишите сообщение в указанный Discord-канал.
+
+Бот автоматически перешлет его в Telegram.
+
+При редактировании или удалении сообщения в Discord, изменения отразятся и в Telegram.
+
+### Пример работы
+**Discord**:
+```
+[User]: Привет! Вот фото:
+[Прикрепленное изображение]
+```
+**Telegram**:
+```
+User (Discord):
+Привет! Вот фото:
+[Фото]
+```
