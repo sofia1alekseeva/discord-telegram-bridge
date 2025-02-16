@@ -48,7 +48,7 @@ npm start
 
 ## Настройка
 ### Discord
-#### Создайте бота на Discord Developer Portal.
+Создайте бота на Discord Developer Portal.
 
 Включите следующие интенты:
 
