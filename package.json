@@ -4,7 +4,8 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node --inspect dist/index.js",
+    "bstart": "npm run build && npm run start",
     "dev": "tsc-watch --onSuccess \"node dist/index.js\""
   },
   "author": "",
@@ -13,8 +14,7 @@
   "dependencies": {
     "discord.js": "^14.13.0",
     "dotenv": "^16.4.7",
-    "node-telegram-bot-api": "^0.66.0",
-    "socks-proxy-agent": "^5.0.0"
+    "node-telegram-bot-api": "^0.66.0"
   },
   "devDependencies": {
     "@types/dotenv": "^6.1.1",
