@@ -6,7 +6,8 @@
     "build": "tsc",
     "start": "node --inspect dist/index.js",
     "bstart": "npm run build && npm run start",
-    "dev": "tsc-watch --onSuccess \"node dist/index.js\""
+    "dev": "tsc-watch --onSuccess \"node dist/index.js\"",
+    "rebuild": "./rebuild.sh"
   },
   "author": "",
   "license": "ISC",
