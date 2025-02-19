@@ -13,7 +13,7 @@ RUN apt update && apt install -y curl && \
 ENV PATH="$NVM_DIR/versions/node/v22.14.0/bin:$PATH"
 
 # Установка зависимостей
-RUN apt update && apt install -y \
+RUN apt-get clean && apt update && apt install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 

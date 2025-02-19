@@ -3,9 +3,15 @@ version: '3.8'
 services:
   bot:
     build: .
+    networks:
+      - my_custom_network
     container_name: discord-bot
     # environment:
     #   - NODE_ENV=production
     volumes:
       - ./.env:/app/.env
     restart: unless-stopped
+
+networks:
+  my_custom_network:
+    external: true
