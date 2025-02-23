@@ -1,7 +1,5 @@
 # Discord ↔ Telegram Bridge Bot (Multi-Channel Version)
 
-![Status](https://img.shields.io/badge/status-production-ready-brightgreen) 
-![License](https://img.shields.io/badge/license-MIT-blue)
 
 Advanced bot for bidirectional message synchronization between Discord and Telegram with multi-channel support and topic management.
 
@@ -103,7 +101,7 @@ npm start
 ### Topic Synchronization
 ```yaml
 CHANNEL_PAIRS:
-  - DISCORD_CHANNEL_ID: "announcements"
+  - DISCORD_CHANNEL_ID: "34543534535"
     TELEGRAM_CHAT_ID: -100123456
     TELEGRAM_THREAD_ID: 1
 ```
@@ -111,11 +109,11 @@ CHANNEL_PAIRS:
 ### Multi-Channel Setup
 ```yaml
 CHANNEL_PAIRS:
-  - DISCORD_CHANNEL_ID: "design-team"
+  - DISCORD_CHANNEL_ID: "123234234353"
     TELEGRAM_CHAT_ID: -100112233
     TELEGRAM_THREAD_ID: 2
   
-  - DISCORD_CHANNEL_ID: "dev-chat"
+  - DISCORD_CHANNEL_ID: "345345345345"
     TELEGRAM_CHAT_ID: -100778899
 ```
 
