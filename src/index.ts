@@ -88,6 +88,7 @@ process.on('unhandledRejection', (reason, promise) => {
 interface ChannelPair {
   DISCORD_CHANNEL_ID: string;
   TELEGRAM_CHAT_ID: number;
+  TELEGRAM_CHAT_NAME?: string;
   TELEGRAM_THREAD_ID?: number;
 }
 
@@ -216,24 +217,39 @@ async function deleteFromTelegram(messageId: string): Promise<void> {
 async function sendLastMessages(limit: number): Promise<void> {
   try {
     for (const pair of channelPairs) {
-      const channel = (await discordClient.channels.fetch(pair.DISCORD_CHANNEL_ID)) as TextChannel;
-      if (!channel) {
-        console.error(`Канал ${pair.DISCORD_CHANNEL_ID} не найден`);
+      const discordChannel = (await discordClient.channels.fetch(pair.DISCORD_CHANNEL_ID)) as TextChannel;
+      if (!discordChannel) {
+        console.error(`❌ Discord канал ${pair.DISCORD_CHANNEL_ID} не найден`);
         continue;
       }
 
-      const messages = await channel.messages.fetch({ limit });
+      let telegramChatName = `ID: ${pair.TELEGRAM_CHAT_ID}`;
+      try {
+        const chatInfo = await telegramBot.getChat(pair.TELEGRAM_CHAT_ID.toString());
+        telegramChatName = chatInfo.title || telegramChatName;
+      } catch (error) {
+        console.error(`Не удалось получить название чата ${pair.TELEGRAM_CHAT_ID}:`, error);
+      }
+
+      const threadInfo = pair.TELEGRAM_THREAD_ID 
+        ? ` (Тред ID: ${pair.TELEGRAM_THREAD_ID})` 
+        : '';
+
+      const messages = await discordChannel.messages.fetch({ limit });
       const messagesArray = Array.from(messages.values()).reverse();
+
+      let sentCount = 0;
       for (const message of messagesArray) {
         if (shouldProcessMessage(message)) {
           await sendToTelegram(message);
+          sentCount++;
           await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
-      console.log(`Последние ${limit} сообщений из ${pair.DISCORD_CHANNEL_ID} отправлены в ${pair.TELEGRAM_CHAT_ID}`);
+      console.log(`Последние ${limit} сообщений из $${discordChannel.name} отправлены в ${telegramChatName}${threadInfo}`);
     }
   } catch (error) {
-    console.error('Ошибка при отправке истории:', error);
+    console.error('🚨 Критическая ошибка при отправке последних сообщений:', error);
   }
 }
 
@@ -266,16 +282,34 @@ discordClient.on('messageDelete', async (message) => {
   }
 });
 
-discordClient.on('ready', () => {
+discordClient.on('ready', async () => {
   console.log('✅ Бот подключен к Discord');
-  channelPairs.forEach(pair => {
-    const channel = discordClient.channels.cache.get(pair.DISCORD_CHANNEL_ID);
-    if (!channel) {
-      console.error(`❌ Канал ${pair.DISCORD_CHANNEL_ID} не найден!`);
-      return;
+
+  for (const pair of channelPairs) {
+    try {
+      const discordChannel = await discordClient.channels.fetch(pair.DISCORD_CHANNEL_ID) as TextChannel;
+      if (!discordChannel) {
+        console.error(`❌ Discord канал ${pair.DISCORD_CHANNEL_ID} не найден!`);
+        continue;
+      }
+
+      const chat = await telegramBot.getChat(pair.TELEGRAM_CHAT_ID.toString());
+      const chatName = chat.title || `Чат ID: ${pair.TELEGRAM_CHAT_ID}`;
+
+      const threadInfo = pair.TELEGRAM_THREAD_ID 
+        ? ` (Thread ID: ${pair.TELEGRAM_THREAD_ID})` 
+        : '';
+
+      console.log(
+        `📢 Бот слушает канал: ${discordChannel.name} -> ` +
+        `Telegram ${chatName}${threadInfo}`
+      );
+
+    } catch (error) {
+      console.error(`Ошибка обработки пары ${pair.DISCORD_CHANNEL_ID}:`, error);
     }
-    console.log(`📢 Бот слушает канал: ${(channel as TextChannel).name} -> Telegram ${pair.TELEGRAM_CHAT_ID}${pair.TELEGRAM_THREAD_ID ? ` (Thread ${pair.TELEGRAM_THREAD_ID})` : ''}`);
-  });
+  }
+
   sendLastMessages(1);
 });
 
