@@ -26,7 +26,7 @@ COPY tsconfig.json ./
 RUN npm install
 
 COPY src ./src
-COPY env.json .
+COPY env.yaml .
 
 RUN npm run build
 

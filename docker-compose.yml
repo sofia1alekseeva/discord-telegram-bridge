@@ -9,7 +9,7 @@ services:
     # environment:
     #   - NODE_ENV=production
     volumes:
-      - ./env.json:/app/env.json
+      - ./env.yaml:/app/env.yaml
     restart: unless-stopped
 
 networks:

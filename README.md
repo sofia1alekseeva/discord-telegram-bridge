@@ -45,7 +45,10 @@ CHANNEL_PAIRS:
     TELEGRAM_CHAT_ID: -100456         # Required
     TELEGRAM_THREAD_ID: 789           # Optional
 ```
-
+or copy the example configuration file and fill in your tokens and channel pairs:
+```bash
+cp env.example.yaml env.yaml
+```
 2. Build the project:
 ```bash
 npm run build

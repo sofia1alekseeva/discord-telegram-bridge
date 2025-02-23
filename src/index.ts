@@ -127,7 +127,7 @@ async function sendToTelegram(message: Message): Promise<void> {
     const pair = channelPairs.find(p => p.DISCORD_CHANNEL_ID === message.channel.id);
     if (!pair) return;
 
-    const text = `*${message.author.displayName}* (Discord):\n${message.content}`;
+    const text = `*${message.author.displayName}*:\n${message.content}`;
     const media = Array.from(message.attachments.values());
 
     let telegramMessageId: number;
