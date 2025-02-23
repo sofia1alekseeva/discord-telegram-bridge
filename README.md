@@ -18,7 +18,6 @@ Advanced bot for bidirectional message synchronization between Discord and Teleg
 | node-telegram-bot-api | 0.61.0 | Telegram Bot API      |
 | TypeScript      | 5.0       | Static typing         |
 | YAML            | 2.3.4     | Channel configuration          |
-| Winston         | 3.11.0    | Advanced logging       |
 
 ## 📦 Installation
 
