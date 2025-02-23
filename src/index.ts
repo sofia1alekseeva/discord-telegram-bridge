@@ -1,30 +1,76 @@
 import { Client, ClientOptions, GatewayIntentBits, Message, PartialMessage, TextChannel } from 'discord.js';
 import TelegramBot, { InputMedia, SendMediaGroupOptions } from 'node-telegram-bot-api';
 import * as fs from 'fs';
+import * as yaml from 'js-yaml';
+import { exit } from 'process';
 
-// Загрузка конфигурации из env.json
-const envConfig = JSON.parse(fs.readFileSync('env.json', 'utf8'));
+interface AppConfig {
+  DISCORD_TOKEN: string;
+  TELEGRAM_TOKEN: string;
+  CHANNEL_PAIRS: Array<{
+    DISCORD_CHANNEL_ID: string;
+    TELEGRAM_CHAT_ID: number;
+    TELEGRAM_THREAD_ID?: number;
+  }>;
+}
 
-// Проверка обязательных переменных
-const requiredEnvVars = ['DISCORD_TOKEN', 'TELEGRAM_TOKEN', 'CHANNEL_PAIRS'];
+const loadConfig = (): AppConfig => {
+  try {
+    const fileContents = fs.readFileSync('env.yaml', 'utf8');
+    return yaml.load(fileContents) as AppConfig;
+  } catch (e) {
+    console.error('Config load error:', e);
+    exit(1);
+  }
+};
 
-const checkRequiredEnvVars = (config: any, requiredVars: string[]) => {
-  requiredVars.forEach(varName => {
-    if (!config[varName]) {
-      console.error(`Missing required variable: ${varName}`);
-      process.exit(1);
+const envConfig = loadConfig();
+
+const checkConfig = (config: AppConfig) => {
+  const requiredRootKeys: (keyof AppConfig)[] = [
+    'DISCORD_TOKEN',
+    'TELEGRAM_TOKEN',
+    'CHANNEL_PAIRS'
+  ];
+
+  requiredRootKeys.forEach(key => {
+    if (config[key] === undefined || config[key] === null) {
+      throw new Error(`Missing required root key: ${String(key)}`);
+    }
+  });
+
+  if (!Array.isArray(config.CHANNEL_PAIRS)) {
+    throw new Error('CHANNEL_PAIRS must be an array');
+  }
+
+  config.CHANNEL_PAIRS.forEach((pair, index) => {
+    const requiredPairKeys: (keyof AppConfig['CHANNEL_PAIRS'][number])[] = [
+      'DISCORD_CHANNEL_ID',
+      'TELEGRAM_CHAT_ID'
+    ];
+
+    requiredPairKeys.forEach(key => {
+      if (!pair[key]) {
+        throw new Error(`Missing ${String(key)} in pair #${index + 1}`);
+      }
+    });
+
+    if (typeof pair.DISCORD_CHANNEL_ID !== 'string') {
+      throw new Error(`DISCORD_CHANNEL_ID must be string in pair #${index + 1}`);
+    }
+
+    if (isNaN(Number(pair.TELEGRAM_CHAT_ID))) {
+      throw new Error(`TELEGRAM_CHAT_ID must be a number in pair #${index + 1}`);
     }
   });
 };
-checkRequiredEnvVars(envConfig, requiredEnvVars);
 
-console.log('Загруженные пары каналов:');
-envConfig.CHANNEL_PAIRS.forEach((pair: any, index: number) => {
-  console.log(`Пара #${index + 1}:`);
-  console.log(`  Discord: ${pair.DISCORD_CHANNEL_ID}`);
-  console.log(`  Telegram Chat: ${pair.TELEGRAM_CHAT_ID}`);
-  console.log(`  Telegram Thread: ${pair.TELEGRAM_THREAD_ID || 'Нет'}`);
-});
+try {
+  checkConfig(envConfig);
+} catch (e) {
+  console.error('Ошибка конфигурации:', e);
+  exit(1);
+}
 
   interface SendMediaGroupOptionsExtra extends SendMediaGroupOptions {
     message_thread_id?: number;
@@ -39,23 +85,17 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 });
 
-// Интерфейс для пар каналов
 interface ChannelPair {
   DISCORD_CHANNEL_ID: string;
   TELEGRAM_CHAT_ID: number;
   TELEGRAM_THREAD_ID?: number;
 }
 
-const channelPairs: ChannelPair[] = envConfig.CHANNEL_PAIRS.map((pair: any) => {
-  if (!pair.DISCORD_CHANNEL_ID || pair.TELEGRAM_CHAT_ID === undefined) {
-    throw new Error('Each pair must have DISCORD_CHANNEL_ID and TELEGRAM_CHAT_ID');
-  }
-  return {
-    DISCORD_CHANNEL_ID: String(pair.DISCORD_CHANNEL_ID),
-    TELEGRAM_CHAT_ID: Number(pair.TELEGRAM_CHAT_ID),
-    TELEGRAM_THREAD_ID: pair.TELEGRAM_THREAD_ID ? Number(pair.TELEGRAM_THREAD_ID) : undefined
-  };
-});
+const channelPairs: ChannelPair[] = envConfig.CHANNEL_PAIRS.map(pair => ({
+  DISCORD_CHANNEL_ID: String(pair.DISCORD_CHANNEL_ID),
+  TELEGRAM_CHAT_ID: Number(pair.TELEGRAM_CHAT_ID),
+  TELEGRAM_THREAD_ID: pair.TELEGRAM_THREAD_ID ? Number(pair.TELEGRAM_THREAD_ID) : undefined
+}));
 
 interface TelegramMessageData {
   messageId: number;
