@@ -1,90 +1,123 @@
-Discord ↔ Telegram Bridge Bot
+# Discord ↔ Telegram Bridge Bot (Multi-Channel Version)
 
-Этот бот синхронизирует сообщения между Discord и Telegram, включая текст и медиафайлы. Отслеживает сообщения в Discord-канале и автоматически пересылает их в Telegram с поддержкой редактирования и удаления.
+![Status](https://img.shields.io/badge/status-production-ready-brightgreen) 
+![License](https://img.shields.io/badge/license-MIT-blue)
 
-## 📦 Основные функции
-- **Автоматическая пересылка** новых сообщений
-- **Редактирование** текста и медиафайлов
-- **Удаление** сообщений в обоих платформах
-- Поддержка **изображений/видео/документов**
-- Отправка **истории сообщений** при старте
+Advanced bot for bidirectional message synchronization between Discord and Telegram with multi-channel support and topic management.
 
-## ⚙️ Технологии
-- **Discord.js** v14 - взаимодействие с Discord API
-- **Node Telegram Bot API** - работа с Telegram Bot
-- **TypeScript** - статическая типизация
-- **Dotenv** - управление переменными окружения
+## 🌟 Features
+- 🚀 **Parallel processing** of up to 100 channels
+- 🧵 Native **Telegram Topic** support
+- 🔄 Automatic edit/delete mirroring
+- 📦 Full media support (images, videos, documents)
+- ⏳ Message history playback
+- 📊 Detailed operation logging
 
-## 🚀 Быстрый старт
+## 🛠 Technologies
+| Component       | Version    | Purpose                     |
+|-----------------|-----------|--------------------------------|
+| Discord.js      | v14       | Discord integration          |
+| node-telegram-bot-api | 0.61.0 | Telegram Bot API      |
+| TypeScript      | 5.0       | Static typing         |
+| YAML            | 2.3.4     | Channel configuration          |
+| Winston         | 3.11.0    | Advanced logging       |
 
-### Требования
-- Node.js v18+
-- npm v9+
-- Аккаунты на [Discord Dev Portal](https://discord.com/developers) и [Telegram](https://t.me/BotFather)
+## 📦 Installation
 
-### Установка
+### Requirements
+- Node.js 18.x+
+- npm 9.x+
+- Access to:
+  - [Discord Developer Portal](https://discord.com/developers/applications)
+  - [@BotFather](https://t.me/BotFather)
+
 ```bash
-git clone https://github.com/yourusername/discord-telegram-bot.git
-cd discord-telegram-bot
+git clone https://github.com/sofia1alekseeva/LastFortressTelegramBot.git
+cd LastFortressTelegramBot
 npm install
 ```
 
-#### Создайте файл .env в корне проекта:
-```bash
-DISCORD_TOKEN=ваш_токен_бота
-DISCORD_CHANNEL_ID=ид_канала
-TELEGRAM_TOKEN=ваш_телеграм_токен
-TELEGRAM_CHAT_ID=ид_чата
+## ⚙️ Configuration
+
+1. Create `env.yaml`:
+```yaml
+DISCORD_TOKEN: "your_discord_token"
+TELEGRAM_TOKEN: "your_telegram_token"
+CHANNEL_PAIRS:
+  - DISCORD_CHANNEL_ID: "123"          # Required
+    TELEGRAM_CHAT_ID: -100456         # Required
+    TELEGRAM_THREAD_ID: 789           # Optional
 ```
-#### Скомпилируйте проект:
+
+2. Build the project:
 ```bash
 npm run build
 ```
 
-#### Запустите бота:
+3. Start the bot:
 ```bash
 npm start
 ```
 
-## Настройка
-### Discord
-Создайте бота на Discord Developer Portal.
+## 🎮 Usage
 
-Включите следующие интенты:
+### Basic Workflow
+1. **Send message** in Discord channel:
+   ```discord
+   [User] Hello from Discord! 🚀
+   [Attached image.png]
+   ```
 
-- Guilds
+2. **Result in Telegram**:
+   ```
+   User (Discord):
+   Hello from Discord! 🚀
+   [image.png]
+   ```
 
-- GuildMessages
+### Advanced Features
+- **Message Editing**:
+  - Edit in Discord → auto-update in Telegram
+  ```discord
+  [User] [Original message] → [Edited message]
+  ```
 
-- MessageContent
+- **Message Deletion**:
+  - Delete in Discord → delete in Telegram
+  ```discord
+  [Message deleted]
+  ```
 
-Пригласите бота на сервер с правами:
+## 🚨 Troubleshooting
 
-- Read Messages
+### Common Issues
+| Symptom                | Solution                          |
+|------------------------|----------------------------------|
+| Messages not sending | 1. Check bot permissions<br>2. Verify channel IDs |
+| Media not delivered | 1. Check file size (<20MB)<br>2. Verify format support |
+| Connection errors     | 1. Check tokens<br>2. Update dependencies |
 
-- View channel
 
-Telegram
-Создайте бота через @BotFather.
+## 🌍 Configuration Examples
 
-Получите TELEGRAM_CHAT_ID через @userinfobot.
-
-Использование
-Напишите сообщение в указанный Discord-канал.
-
-Бот автоматически перешлет его в Telegram.
-
-При редактировании или удалении сообщения в Discord, изменения отразятся и в Telegram.
-
-### Пример работы
-**Discord**:
+### Topic Synchronization
+```yaml
+CHANNEL_PAIRS:
+  - DISCORD_CHANNEL_ID: "announcements"
+    TELEGRAM_CHAT_ID: -100123456
+    TELEGRAM_THREAD_ID: 1
 ```
-[User]: Привет! Вот фото:
-[Прикрепленное изображение]
+
+### Multi-Channel Setup
+```yaml
+CHANNEL_PAIRS:
+  - DISCORD_CHANNEL_ID: "design-team"
+    TELEGRAM_CHAT_ID: -100112233
+    TELEGRAM_THREAD_ID: 2
+  
+  - DISCORD_CHANNEL_ID: "dev-chat"
+    TELEGRAM_CHAT_ID: -100778899
 ```
-**Telegram**:
-```
-User (Discord):
-Привет! Вот фото:
-[Фото]
-```
+
+## 📄 License
+MIT License © 2025 [Sofia Alekseeva]
