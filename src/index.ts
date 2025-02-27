@@ -1,5 +1,6 @@
-import { Client, ClientOptions, GatewayIntentBits, Message, PartialMessage, TextChannel } from 'discord.js';
+import { Client, ClientOptions, GatewayIntentBits, Message, PartialMessage, PermissionsBitField, TextChannel } from 'discord.js';
 import TelegramBot, { InputMedia, SendMediaGroupOptions } from 'node-telegram-bot-api';
+import { initMentionLogger, logger } from './telegram/mentionLogger';
 import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 import { exit } from 'process';
@@ -111,7 +112,9 @@ const discordOptions: ClientOptions = {
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMessageTyping,
+    GatewayIntentBits.DirectMessages
   ],
   rest: {
     timeout: 30000
@@ -119,13 +122,34 @@ const discordOptions: ClientOptions = {
 };
 
 const discordClient = new Client(discordOptions);
-const telegramBot = new TelegramBot(envConfig.TELEGRAM_TOKEN);
+const telegramBot = new TelegramBot(envConfig.TELEGRAM_TOKEN, {
+  polling: true
+});
 
-// Отправка сообщения с медиа
+initMentionLogger(telegramBot);
+
+
 async function sendToTelegram(message: Message): Promise<void> {
   try {
+    console.log('🔎 Начало обработки сообщения:', {
+      id: message.id,
+      channel: message.channel.id,
+      author: message.author?.tag,
+      content: message.content.substring(0, 50) + '...',
+      attachments: message.attachments.size
+    });
+
     const pair = channelPairs.find(p => p.DISCORD_CHANNEL_ID === message.channel.id);
-    if (!pair) return;
+    if (!pair) {
+      console.error('🚫 Канал не найден в конфигурации:', message.channel.id);
+      return;
+    }
+
+    console.log('🔗 Найдена связка каналов:', {
+      discord: pair.DISCORD_CHANNEL_ID,
+      telegram: pair.TELEGRAM_CHAT_ID,
+      thread: pair.TELEGRAM_THREAD_ID
+    });
 
     const text = `*${message.author.displayName}*:\n${message.content}`;
     const media = Array.from(message.attachments.values());
@@ -170,12 +194,14 @@ async function sendToTelegram(message: Message): Promise<void> {
       telegramThreadId: pair.TELEGRAM_THREAD_ID 
     });
 
-  } catch (error) {
-    console.error('Ошибка отправки:', error);
+  } catch (error:any) {
+    console.error('💥 Критическая ошибка:', {
+      error: error.message,
+      stack: error.stack
+    });
   }
 }
 
-// Редактирование сообщения
 async function editInTelegram(message: Message | PartialMessage): Promise<void> {
   try {
     const data = messageStore.get(message.id);
@@ -189,7 +215,6 @@ async function editInTelegram(message: Message | PartialMessage): Promise<void> 
   }
 }
 
-// Удаление сообщения
 async function deleteFromTelegram(messageId: string): Promise<void> {
   try {
     const data = messageStore.get(messageId);
@@ -213,8 +238,7 @@ async function deleteFromTelegram(messageId: string): Promise<void> {
   }
 }
 
-// Отправка последних сообщений
-async function sendLastMessages(limit: number): Promise<void> {
+async function sendLastMessages(limit: number, autoDelete: boolean = true, deleteTimeout: number = 5000): Promise<void> {
   try {
     for (const pair of channelPairs) {
       const discordChannel = (await discordClient.channels.fetch(pair.DISCORD_CHANNEL_ID)) as TextChannel;
@@ -241,33 +265,106 @@ async function sendLastMessages(limit: number): Promise<void> {
       let sentCount = 0;
       for (const message of messagesArray) {
         if (shouldProcessMessage(message)) {
-          await sendToTelegram(message);
-          sentCount++;
-          await new Promise(resolve => setTimeout(resolve, 500));
+          if (!messageStore.has(message.id)) {
+            await sendToTelegram(message);
+            sentCount++;
+            if (autoDelete) {
+              setTimeout(async () => {
+                try {
+                  await deleteFromTelegram(message.id);
+                  console.log(`🗑️ Сообщение ${message.id} удалено из Telegram через ${deleteTimeout} секунд`);
+                } catch (error) {
+                  console.error(`Ошибка при удалении сообщения ${message.id}:`, error);
+                }
+              }, deleteTimeout);
+            } else {
+              console.log(`⏳ Сообщение ${message.id} оставлено в Telegram (autoDelete отключено)`);
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 500)); 
+          } else {
+            console.log(`⏩ Сообщение ${message.id} уже отправлено, пропускаем`);
+          }
         }
       }
-      console.log(`Последние ${limit} сообщений из $${discordChannel.name} отправлены в ${telegramChatName}${threadInfo}`);
+      console.log(`Отправлено ${sentCount} новых сообщений из ${discordChannel.name} в ${telegramChatName}${threadInfo}`);
     }
   } catch (error) {
     console.error('🚨 Критическая ошибка при отправке последних сообщений:', error);
   }
 }
 
-// Проверка сообщения
 function shouldProcessMessage(message: Message | PartialMessage): boolean {
-  return !!(
-    channelPairs.some(pair => pair.DISCORD_CHANNEL_ID === message.channel.id) &&
-    !message.author?.bot &&
-    (message.content || message.attachments.size > 0)
-  );
+  const channelCheck = channelPairs.some(pair => {
+    const match = pair.DISCORD_CHANNEL_ID === message.channel.id;
+    // console.log(`🔍 Проверка канала ${message.channel.id}: ${match ? '✅ Совпадение' : '🚫 Не совпадает'}`);
+    return match;
+  });
+
+
+  const hasContent = !!(message.content || message.attachments?.size > 0);
+  
+  // console.log(`📋 Критерии обработки для сообщения ${message.id}:`, {
+  //   channelCheck,
+  //   hasContent,
+  //   shouldProcess: channelCheck && hasContent
+  // });
+
+  return channelCheck && hasContent;
 }
 
-// Обработчики событий
+async function checkTelegramAccess() {
+  for (const pair of channelPairs) {
+    try {
+      const chat = await telegramBot.getChat(pair.TELEGRAM_CHAT_ID.toString());
+      console.log(`✉️ Проверка доступа к Telegram ${pair.TELEGRAM_CHAT_ID}:`, {
+        title: chat.title,
+        type: chat.type,
+        is_forum: chat.is_forum
+      });
+
+      if (pair.TELEGRAM_THREAD_ID) {
+        try {
+          const testMessage = await telegramBot.sendMessage(
+            pair.TELEGRAM_CHAT_ID.toString(),
+            '🔍 Проверка работы треда...',
+            {
+              message_thread_id: pair.TELEGRAM_THREAD_ID,
+              disable_notification: true
+            }
+          );
+          
+          console.log(`✅ Тред ${pair.TELEGRAM_THREAD_ID} доступен`);
+          await telegramBot.deleteMessage(
+            pair.TELEGRAM_CHAT_ID.toString(), 
+            testMessage.message_id
+          );
+          
+        } catch (error) {
+          console.error(`❌ Ошибка доступа к треду ${pair.TELEGRAM_THREAD_ID}:`, {
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+    } catch (error) {
+      console.error(`❌ Ошибка доступа к чату ${pair.TELEGRAM_CHAT_ID}:`, {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+}
+
 discordClient.on('messageCreate', async (message) => {
-  if (shouldProcessMessage(message)) {
+  console.log(`📩 Получено сообщение в канале ${message.channel.id}:`, {
+    content: message.content,
+    author: message.author?.tag,
+    attachments: message.attachments.size
+  });
+
+  if (shouldProcessMessage(message) && !messageStore.has(message.id)) {
+    console.log(`🚀 Начало обработки сообщения ${message.id}`);
     await sendToTelegram(message);
   }
-  console.log(`📩 Новое сообщение в канале ${message.channel.id}`);
 });
 
 discordClient.on('messageUpdate', async (oldMsg, newMsg) => {
@@ -284,36 +381,50 @@ discordClient.on('messageDelete', async (message) => {
 
 discordClient.on('ready', async () => {
   console.log('✅ Бот подключен к Discord');
-
   for (const pair of channelPairs) {
     try {
-      const discordChannel = await discordClient.channels.fetch(pair.DISCORD_CHANNEL_ID) as TextChannel;
-      if (!discordChannel) {
-        console.error(`❌ Discord канал ${pair.DISCORD_CHANNEL_ID} не найден!`);
+      const channel = await discordClient.channels.fetch(pair.DISCORD_CHANNEL_ID) as TextChannel;
+      
+      if (!channel) {
+        console.error(`❌ Канал ${pair.DISCORD_CHANNEL_ID} не найден`);
         continue;
       }
 
-      const chat = await telegramBot.getChat(pair.TELEGRAM_CHAT_ID.toString());
-      const chatName = chat.title || `Чат ID: ${pair.TELEGRAM_CHAT_ID}`;
+      const permissions = channel.permissionsFor(discordClient.user!.id);
+      if (!permissions) {
+        console.error(`🚫 Нет прав доступа к каналу ${channel.name}`);
+        continue;
+      }
 
-      const threadInfo = pair.TELEGRAM_THREAD_ID 
-        ? ` (Thread ID: ${pair.TELEGRAM_THREAD_ID})` 
-        : '';
+      console.log(`🔐 Права для канала ${channel.name}:`, {
+        ViewChannel: permissions.has(PermissionsBitField.Flags.ViewChannel),
+        ReadMessageHistory: permissions.has(PermissionsBitField.Flags.ReadMessageHistory),
+        SendMessages: permissions.has(PermissionsBitField.Flags.SendMessages),
+        ManageWebhooks: permissions.has(PermissionsBitField.Flags.ManageWebhooks),
+        AttachFiles: permissions.has(PermissionsBitField.Flags.AttachFiles),
+        EmbedLinks: permissions.has(PermissionsBitField.Flags.EmbedLinks)
+      });
 
-      console.log(
-        `📢 Бот слушает канал: ${discordChannel.name} -> ` +
-        `Telegram ${chatName}${threadInfo}`
-      );
+      try {
+        const testMessage = await channel.messages.fetch({ limit: 1 });
+        console.log(`✅ Успешное чтение сообщений в ${channel.name}`);
+      } catch (error) {
+        console.error(`❌ Ошибка чтения сообщений в ${channel.name}:`, error);
+      }
 
-    } catch (error) {
-      console.error(`Ошибка обработки пары ${pair.DISCORD_CHANNEL_ID}:`, error);
+      checkTelegramAccess()
+      
+    } catch (error:any) {
+      console.error('🔴 Ошибка доступа:', {
+        channelId: pair.DISCORD_CHANNEL_ID,
+        error: error.message
+      });
     }
   }
-
+  
   sendLastMessages(1);
 });
 
-// Запуск бота
 discordClient.login(envConfig.DISCORD_TOKEN)
   .then(() => console.log('Discord bot connected'))
   .catch(error => console.error('Discord login error:', error));
