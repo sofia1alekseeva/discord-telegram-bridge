@@ -4,9 +4,9 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node --inspect dist/index.js",
+    "start": "node --inspect dist/main.js",
     "bstart": "npm run build && npm run start",
-    "dev": "tsc-watch --onSuccess \"node dist/index.js\"",
+    "dev": "tsc-watch --onSuccess \"node dist/main.js\"",
     "rebuild": "./rebuild.sh"
   },
   "author": "",

@@ -12,12 +12,13 @@ Advanced bot for bidirectional message synchronization between Discord and Teleg
 - 📊 Detailed operation logging
 
 ## 🛠 Technologies
-| Component       | Version    | Purpose                     |
-|-----------------|-----------|--------------------------------|
-| Discord.js      | v14       | Discord integration          |
-| node-telegram-bot-api | 0.61.0 | Telegram Bot API      |
-| TypeScript      | 5.0       | Static typing         |
-| YAML            | 2.3.4     | Channel configuration          |
+| Component             | Version    | Purpose                     |
+|-----------------------|------------|-----------------------------|
+| Discord.js            | ^14.0.0    | Discord API integration     |
+| node-telegram-bot-api | ^0.61.0    | Telegram Bot API            |
+| TypeScript            | ^5.0.0     | Static typing               |
+| js-yaml               | ^2.3.4     | YAML configuration parsing  |
+| Winston               | ^3.0.0     | Logging                     |
 
 ## 📦 Installation
 
