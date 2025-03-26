@@ -31,8 +31,8 @@ export class MessageBridge {
 
   private async handleReady(): Promise<void> {
     this.logger.info('Bot is ready');
-    const sentMessages = await this.sendRecentMessages(1);
-    setTimeout(() => this.deleteMessages(sentMessages), 5000);
+    // const sentMessages = await this.sendRecentMessages(1);
+    // setTimeout(() => this.deleteMessages(sentMessages), 5000);
   }
 
   async sendRecentMessages(limit: number): Promise<SentMessageData[]> {
