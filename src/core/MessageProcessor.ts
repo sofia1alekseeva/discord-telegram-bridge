@@ -3,6 +3,7 @@ import { TelegramClient, TelegramMessageData } from '../clients/TelegramClient';
 import { MessageStore } from './MessageStore';
 import { ChannelPair } from '../config/ConfigLoader';
 import { Logger, LogLevel } from './Logger';
+import { escapeMediaCaption } from '../utils/markdown';
 
 export class MessageProcessor {
   private readonly logger = new Logger({ logLevel: LogLevel.INFO });
@@ -69,7 +70,7 @@ export class MessageProcessor {
     const media = attachments.map((attachment, index) => ({
       type: 'photo' as const,
       media: attachment.url,
-      caption: index === 0 ? text : undefined,
+      caption: attachment.caption ? escapeMediaCaption(attachment.caption) : '',
       parse_mode: 'Markdown' as const,
     }));
     return await this.telegramClient.sendMediaGroup(
