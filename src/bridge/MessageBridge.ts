@@ -31,7 +31,7 @@ export class MessageBridge {
 
   private async handleReady(): Promise<void> {
     this.logger.info('Bot is ready');
-    // const sentMessages = await this.sendRecentMessages(1);
+    // const sentMessages = await this.sendRecentMessages(2);
     // setTimeout(() => this.deleteMessages(sentMessages), 5000);
   }
 
@@ -55,8 +55,8 @@ export class MessageBridge {
 
   async deleteMessages(sentMessages: SentMessageData[]): Promise<void> {
     let deletedCount = 0;
-    const telegramClient = this.processor['telegramClient']; // Доступ к TelegramClient
-    const store = this.processor['store']; // Доступ к MessageStore
+    const telegramClient = this.processor['telegramClient'];
+    const store = this.processor['store'];
 
     for (const { discordMessageId } of sentMessages) {
       try {

@@ -1,6 +1,6 @@
 import TelegramBot, { InputMedia, SendMediaGroupOptions } from 'node-telegram-bot-api';
 import { Logger, LogLevel } from '../core/Logger';
-import { escapeMarkdownV2 } from '../utils/markdown';
+import { escapeUnpairedSymbols } from '../utils/markdown';
 
 interface SendMediaGroupOptionsExtra extends SendMediaGroupOptions {
   message_thread_id?: number;
@@ -24,7 +24,7 @@ export class TelegramClient {
 
   async sendTextMessage(chatId: string, text: string, threadId?: number): Promise<TelegramMessageData> {
     const options = { parse_mode: 'Markdown' as const, message_thread_id: threadId };
-    const sentMessage = await this.bot.sendMessage(chatId, escapeMarkdownV2(text), options);
+    const sentMessage = await this.bot.sendMessage(chatId, escapeUnpairedSymbols(text), options);
     this.logger.debug('Sent text message to Telegram', { chatId, messageId: sentMessage.message_id });
     return {
       messageId: sentMessage.message_id,

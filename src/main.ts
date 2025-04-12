@@ -1,6 +1,5 @@
 import { EventEmitter } from 'events';
 import { ConfigLoader } from './config/ConfigLoader';
-import { DiscordClient } from './clients/DiscordClient';
 import { TelegramClient } from './clients/TelegramClient';
 import { MessageStore } from './core/MessageStore';
 import { MessageProcessor } from './core/MessageProcessor';
